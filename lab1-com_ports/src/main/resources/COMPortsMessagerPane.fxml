@@ -34,7 +34,7 @@
 
     <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS">
         <TextArea fx:id="inputArea" promptText="Start typing here..." VBox.vgrow="ALWAYS"/>
-        <Button text="Send" prefWidth="150" onAction="#sendMessageAction"/>
+        <Button fx:id="sendButton" text="Send" prefWidth="150" onAction="#sendMessageAction"/>
         <TextArea fx:id="outputArea" promptText="Received data" editable="false" VBox.vgrow="ALWAYS"/>
     </VBox>
 </HBox>

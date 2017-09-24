@@ -1,5 +1,7 @@
 package com.zoxal.labs.toks.comports;
 
+import com.zoxal.labs.toks.comports.io.IOFactory;
+import com.zoxal.labs.toks.comports.io.SymbolIOFactory;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXMLLoader;
@@ -13,11 +15,11 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 
-public class View extends Application {
+public class MainView extends Application {
     private static final String FXML_FILE = "COMPortsMessagerPane.fxml";
     private COMPortsController controller;
 
-    public static void main(String[] args) {
+    public void run(String[] args) {
         launch(args);
     }
 
@@ -30,7 +32,7 @@ public class View extends Application {
     public void stop() throws Exception {
         super.stop();
         if (controller != null) {
-            controller.disconnect(controller.getConnectedPort());
+            controller.disconnectFromCurrentPort();
         }
     }
 
@@ -51,12 +53,19 @@ public class View extends Application {
     protected Pane createFXMLView() {
         try {
             FXMLLoader loader = new FXMLLoader(ClassLoader.getSystemResource(FXML_FILE));
+            Pane mainPane = loader.load();
             controller = loader.getController();
-            return loader.load();
+            controller.setIOFactory(getIOFactory());
+            return mainPane;
         } catch (IOException e) {
             e.printStackTrace();
             return createViewProgrammatically();
         }
+    }
+
+    protected IOFactory getIOFactory() {
+        System.out.println("getIOFactory1");
+        return new SymbolIOFactory();
     }
 
     // Implementation just for fun, not working really
