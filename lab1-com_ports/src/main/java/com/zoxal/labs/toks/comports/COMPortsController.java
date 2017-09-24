@@ -1,26 +1,31 @@
 package com.zoxal.labs.toks.comports;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.zoxal.labs.toks.comports.io.*;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToggleButton;
 import javafx.util.StringConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.ResourceBundle;
 
-import static com.zoxal.labs.toks.comports.InputDataListener.TRANSPORT_ENCODING;
+import static com.zoxal.labs.toks.comports.io.RawDataOutput.DEFAULT_TRANSPORT_ENCODING;
 
-public class COMPortsController implements Initializable{
+public class COMPortsController implements Initializable {
+    private static final Logger log = LoggerFactory.getLogger(COMPortsController.class);
     @FXML
     private ComboBox<SerialPort> availablePorts;
     @FXML
     private ToggleButton connectButton;
+    @FXML
+    private Button sendButton;
     @FXML
     private TextArea debugArea;
     @FXML
@@ -28,11 +33,24 @@ public class COMPortsController implements Initializable{
     @FXML
     private TextArea outputArea;
 
-    public SerialPort getConnectedPort() {
-        return connectedPort;
-    }
-
     private SerialPort connectedPort;
+    private ComPortOutput comPortOutput;
+    private DebugOutput debugOutput;
+    private ComPortInputListener comPortInputListener;
+    private IOFactory ioFactory;
+
+    public void setIOFactory(IOFactory ioFactory) {
+        this.ioFactory = ioFactory;
+
+        debugOutput = ioFactory.getDebugOutput();
+        debugOutput.setDebugConsumer(debugArea::appendText);
+
+        comPortInputListener = ioFactory.getComPortInputListener(outputArea::appendText);
+        comPortInputListener.setDebugOutput(debugOutput);
+
+        comPortOutput = ioFactory.getComPortOutput();
+        comPortOutput.setDebugOutput(debugOutput);
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -54,63 +72,70 @@ public class COMPortsController implements Initializable{
                 }
             });
         }
+        sendButton.setDisable(true);
     }
 
     @FXML
     protected void connectToPortAction(ActionEvent event) {
         if (!connectButton.isSelected()) {
             // clicked on 'Disconnect'
-            if (!disconnect(connectedPort)) {
-                debug("Failed to disconnect from ", connectedPort.getDescriptivePortName());
+            if (!disconnectFromCurrentPort()) {
+                debugOutput.debug("Failed to disconnect from ", connectedPort.getDescriptivePortName());
                 connectButton.setSelected(true);
                 return;
             }
 
             availablePorts.setDisable(false);
-            debug("Disconnected from ", connectedPort.getDescriptivePortName());
+            sendButton.setDisable(true);
+            debugOutput.debug("Disconnected from ", connectedPort.getDescriptivePortName());
             connectButton.setText("Connect");
         } else {
             // clicked on 'Connect'
-            connectedPort = availablePorts.getValue();
+            SerialPort connectedPort = availablePorts.getValue();
             if (connectedPort == null || !setupConnection(connectedPort)) {
                 if (connectedPort == null) {
-                    debug("Failed to connect: no port selected");
+                    debugOutput.debug("Failed to connect: no port selected");
                 } else {
-                    debug("Failed to connect to ", connectedPort.getDescriptivePortName());
+                    debugOutput.debug("Failed to connect to ", connectedPort.getDescriptivePortName());
                 }
                 connectButton.setSelected(false);
                 return;
             }
+            sendButton.setDisable(false);
             availablePorts.setDisable(true);
-            debug("Connected to ", connectedPort.getDescriptivePortName());
+            debugOutput.debug("Connected to ", connectedPort.getDescriptivePortName());
             connectButton.setText("Disconnect");
         }
     }
 
     @FXML
     protected void sendMessageAction(ActionEvent e) {
-        byte[] dataToWrite = inputArea.getText().getBytes(TRANSPORT_ENCODING);
-        connectedPort.writeBytes(dataToWrite, dataToWrite.length);
+        byte[] dataToWrite = inputArea.getText().getBytes(DEFAULT_TRANSPORT_ENCODING);
+        comPortOutput.write(dataToWrite, dataToWrite.length);
     }
 
     protected boolean setupConnection(SerialPort connectedPort) {
-        if (connectedPort == null || !connectedPort.openPort()) return false;
-        connectedPort.addDataListener(new InputDataListener(outputArea::appendText));
+        if (!connectedPort.openPort()) {
+            log.error("Failed to connect to {}", connectedPort.getDescriptivePortName());
+            return false;
+        }
+        this.connectedPort = connectedPort;
+        connectedPort.addDataListener(comPortInputListener);
+        comPortOutput.setComPortOutput(connectedPort::writeBytes);
         return true;
     }
 
-    protected boolean disconnect(SerialPort connectedPort) {
-        return (connectedPort != null) && connectedPort.closePort();
-    }
-
-    protected void debug(String ... args) {
-        SimpleDateFormat sdf = new SimpleDateFormat();
-        sdf.applyPattern("[HH:mm:ss]: ");
-
-        StringBuilder builder = new StringBuilder();
-        builder.append(sdf.format(new Date()));
-        builder.append(String.join("", args));
-        builder.append('\n');
-        debugArea.appendText(builder.toString());
+    protected boolean disconnectFromCurrentPort() {
+        if (connectedPort == null) {
+            log.error("Can not disconnect from com-port: no com-port");
+            return false;
+        }
+        if (connectedPort.closePort()) {
+            connectedPort = null;
+            comPortOutput.setComPortOutput(null);
+            return true;
+        }
+        log.error("Failed to disconnectFromCurrentPort from {}", connectedPort.getDescriptivePortName());
+        return false;
     }
 }

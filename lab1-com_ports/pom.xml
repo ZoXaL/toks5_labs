@@ -18,6 +18,14 @@
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -30,7 +38,7 @@
                     <appendAssemblyId>false</appendAssemblyId>
                     <archive>
                         <manifest>
-                            <mainClass>com.zoxal.labs.toks.comports.View</mainClass>
+                            <mainClass>com.zoxal.labs.toks.comports.ApplicationRunner</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
