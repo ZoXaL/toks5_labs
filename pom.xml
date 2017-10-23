@@ -24,7 +24,7 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
+            <dependency> 
                 <groupId>com.fazecast</groupId>
                 <artifactId>jSerialComm</artifactId>
                 <version>${j-serial-comm-version}</version>
