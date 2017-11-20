@@ -5,14 +5,23 @@ package com.zoxal.labs.toks.comports.io;
  * message packaging.
  */
 public abstract class ComPortOutput implements RawDataOutput {
-    protected RawDataOutput comPortOutput;
+    protected RawDataOutput rawOutput;
     protected DebugOutput debugOutput;
+
+    @Override
+    public void writeBytes(byte[] buffer, long bufferSize) {
+        if (rawOutput == null) {
+            throw new IllegalStateException("ComPortOutput is configured wrong: "
+                    + "no underlying output");
+        }
+        rawOutput.writeBytes(buffer, bufferSize);
+    }
 
     public void setDebugOutput(DebugOutput debugOutput) {
         this.debugOutput = debugOutput;
     }
 
-    public void setComPortOutput(RawDataOutput comPortOutput) {
-        this.comPortOutput = comPortOutput;
+    public void setComPortOutput(RawDataOutput rawOutput) {
+        this.rawOutput = rawOutput;
     }
 }

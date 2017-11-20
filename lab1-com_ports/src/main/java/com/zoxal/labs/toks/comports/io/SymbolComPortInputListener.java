@@ -6,8 +6,6 @@ import javafx.application.Platform;
 
 import java.util.function.Consumer;
 
-import static com.zoxal.labs.toks.comports.io.RawDataOutput.DEFAULT_TRANSPORT_ENCODING;
-
 public class SymbolComPortInputListener extends ComPortInputListener {
 
     public SymbolComPortInputListener(Consumer<String> inputDataConsumer) {
@@ -20,7 +18,7 @@ public class SymbolComPortInputListener extends ComPortInputListener {
             throw new IllegalStateException("SymbolComPortInputListener is configured wrong: no inputDataConsumer");
         }
         byte[] data = serialPortEvent.getReceivedData();
-        String result = new String(data, DEFAULT_TRANSPORT_ENCODING);
+        String result = new String(data, ComPortOutput.DEFAULT_TRANSPORT_ENCODING);
         Platform.runLater(() -> inputDataConsumer.accept(result));
     }
 }

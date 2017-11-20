@@ -13,7 +13,10 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 
 public class MainView extends Application {
     private static final String FXML_FILE = "COMPortsMessagerPane.fxml";
@@ -40,19 +43,19 @@ public class MainView extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("COM-port messager");
         primaryStage.setScene(new Scene(createFXMLView()));
-        primaryStage.setWidth(700);
-        primaryStage.setMaxWidth(900);
-        primaryStage.setMinWidth(600);
-
-        primaryStage.setHeight(400);
-        primaryStage.setMaxHeight(600);
-        primaryStage.setMinHeight(400);
+//        primaryStage.setWidth(700);
+//        primaryStage.setMaxWidth(900);
+//        primaryStage.setMinWidth(600);
+//
+//        primaryStage.setHeight(400);
+//        primaryStage.setMaxHeight(600);
+//        primaryStage.setMinHeight(400);
         primaryStage.show();
     }
 
     protected Pane createFXMLView() {
         try {
-            FXMLLoader loader = new FXMLLoader(ClassLoader.getSystemResource(FXML_FILE));
+            FXMLLoader loader = new FXMLLoader(getFXMLView());
             Pane mainPane = loader.load();
             controller = loader.getController();
             controller.setIOFactory(getIOFactory());
@@ -63,8 +66,11 @@ public class MainView extends Application {
         }
     }
 
+    protected URL getFXMLView() {
+        return this.getClass().getClassLoader().getResource(FXML_FILE);
+    }
+
     protected IOFactory getIOFactory() {
-        System.out.println("getIOFactory1");
         return new SymbolIOFactory();
     }
 

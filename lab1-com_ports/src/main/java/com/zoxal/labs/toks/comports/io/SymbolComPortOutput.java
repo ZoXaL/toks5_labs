@@ -2,11 +2,11 @@ package com.zoxal.labs.toks.comports.io;
 
 public class SymbolComPortOutput extends ComPortOutput {
     @Override
-    public void write(byte[] buffer, long bufferSize) {
-        if (comPortOutput == null) {
+    public void writeBytes(byte[] buffer, long bufferSize) {
+        if (rawOutput == null) {
             throw new IllegalStateException("ComPortOutput is configured wrong: "
-                    + "no underlying comPortOutput");
+                    + "no underlying serial port");
         }
-        comPortOutput.write(buffer, bufferSize);
+        rawOutput.writeBytes(buffer, bufferSize);
     }
 }

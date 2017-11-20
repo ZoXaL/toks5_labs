@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 public abstract class ComPortInputListener implements SerialPortPacketListener {
     protected Consumer<String> inputDataConsumer;
     protected DebugOutput debugOutput;
+    protected SerialPort serialPort;
 
     public ComPortInputListener(Consumer<String> inputDataConsumer) {
         this.inputDataConsumer = inputDataConsumer;
@@ -28,6 +29,10 @@ public abstract class ComPortInputListener implements SerialPortPacketListener {
 
     public void setDebugOutput(DebugOutput debugOutput) {
         this.debugOutput = debugOutput;
+    }
+
+    public void setSerialPort(SerialPort serialPort) {
+        this.serialPort = serialPort;
     }
 
     public void setInputDataConsumer(Consumer<String> inputDataConsumer) {

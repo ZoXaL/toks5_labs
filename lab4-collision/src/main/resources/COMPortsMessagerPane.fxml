@@ -9,7 +9,7 @@
 <?import com.fazecast.jSerialComm.SerialPort?>
 
 <HBox spacing="10" xmlns:fx="http://javafx.com/fxml"
-          fx:controller="com.zoxal.labs.toks.comports.COMPortsController">
+          fx:controller="com.zoxal.labs.toks.collision.COMPortsController">
     <padding>
         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
     </padding>
@@ -34,7 +34,7 @@
 
     <VBox maxHeight="300" alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS">
         <TextArea fx:id="inputArea" promptText="Start typing here..." VBox.vgrow="ALWAYS"/>
-        <Button fx:id="sendButton" text="Send" prefWidth="150" onAction="#sendMessageAction"/>
+        <Separator orientation="HORIZONTAL"/>
         <TextArea fx:id="outputArea" promptText="Received data" editable="false" VBox.vgrow="ALWAYS"/>
     </VBox>
 </HBox>

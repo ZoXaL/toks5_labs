@@ -1,25 +1,23 @@
-package com.zoxal.labs.toks.comports;
+package com.zoxal.labs.toks.collision;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.zoxal.labs.toks.comports.io.*;
+import com.zoxal.labs.toks.collision.io.CollisionComPortInputListener;
+import com.zoxal.labs.toks.collision.io.CollisionComPortOutput;
+import com.zoxal.labs.toks.collision.io.CollisionException;
+import com.zoxal.labs.toks.collision.io.DebugOutput;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.input.KeyCode;
 import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.util.ResourceBundle;
-import java.util.function.Consumer;
-
-import static com.zoxal.labs.toks.comports.io.ComPortOutput.DEFAULT_TRANSPORT_ENCODING;
 
 
 public class COMPortsController implements Initializable {
@@ -29,8 +27,6 @@ public class COMPortsController implements Initializable {
     @FXML
     private ToggleButton connectButton;
     @FXML
-    private Button sendButton;
-    @FXML
     private TextArea debugArea;
     @FXML
     private TextArea inputArea;
@@ -38,16 +34,8 @@ public class COMPortsController implements Initializable {
     private TextArea outputArea;
 
     private SerialPort connectedPort;
-    private ComPortOutput comPortOutput;
-    private DebugOutput debugOutput;
-    private IOFactory ioFactory;
-
-    public void setIOFactory(IOFactory ioFactory) {
-        this.ioFactory = ioFactory;
-
-        debugOutput = ioFactory.getDebugOutput();
-        debugOutput.setDebugConsumer(debugArea::appendText);
-    }
+    private DebugOutput debugOutput = new DebugOutput();
+    private CollisionComPortOutput comPortOutput = new CollisionComPortOutput(debugOutput);
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -69,12 +57,25 @@ public class COMPortsController implements Initializable {
                 }
             });
         }
-        sendButton.setDisable(true);
-//        inputArea.setOnKeyPressed(event -> {
-//            if(event.getCode() == KeyCode.ENTER && inputArea.isFocused()){
-//                sendMessageAction(null);
-//            }
-//        });
+        inputArea.setDisable(true);
+        debugOutput.setDebugConsumer(debugArea::appendText);
+
+        // key press configuration
+        inputArea.setOnKeyTyped(event -> Platform.runLater(() -> {
+            inputArea.setDisable(true);
+            new Thread(() -> {
+                try {
+                    comPortOutput.writeData(
+                        event.getCharacter().getBytes(CollisionComPortOutput.CHARSET)[0]
+                    );
+                } catch (CollisionException ce) {
+                    debugOutput.debug("X");
+                } catch (InterruptedException ie) {
+                    log.warn("Unexpected exception during waiting slot time", ie);
+                }
+                inputArea.setDisable(false);
+            }).start();
+        }));
     }
 
     @FXML
@@ -88,7 +89,7 @@ public class COMPortsController implements Initializable {
                 return;
             }
             availablePorts.setDisable(false);
-            sendButton.setDisable(true);
+            inputArea.setDisable(true);
             debugOutput.debug("Disconnected from ", currentPortName);
             connectButton.setText("Connect");
         } else {
@@ -97,29 +98,18 @@ public class COMPortsController implements Initializable {
             if (portToConnect != null) {
                 connectedPort = portToConnect;
                 debugOutput.debug("Connecting to " + connectedPort.getSystemPortName() + "...");
-                setupConnection(
-                        connectedPort,
-                        debugOutput,
-                        (ComPortOutput output) -> {
-                            comPortOutput = output;
-                            connectedPort.removeDataListener();
-                            ComPortInputListener listener = ioFactory.getComPortInputListener(outputArea::appendText);
-                            listener.setDebugOutput(debugOutput);
-                            connectedPort.addDataListener(listener);
-
-                            sendButton.setDisable(false);
-                            availablePorts.setDisable(true);
-                            debugOutput.debug("Connected to ", connectedPort.getSystemPortName());
-                            connectButton.setText("Disconnect");
-                        },
-                        () -> {
-                            debugOutput.debug("Failed to connect to ", connectedPort.getSystemPortName());
-                            log.error("Failed to connect to {}", connectedPort.getSystemPortName());
-                            connectedPort = null;
-                            comPortOutput = null;
-                            connectButton.setSelected(false);
-                        }
-                    );
+                if (connectedPort.openPort()) {
+                    setupConnectedPort();
+                    inputArea.setDisable(false);
+                    availablePorts.setDisable(true);
+                    debugOutput.debug("Connected to ", connectedPort.getSystemPortName());
+                    connectButton.setText("Disconnect");
+                } else {
+                    debugOutput.debug("Failed to connect to ", connectedPort.getSystemPortName());
+                    log.error("Failed to connect to {}", connectedPort.getSystemPortName());
+                    connectedPort = null;
+                    connectButton.setSelected(false);
+                }
             } else {
                 debugOutput.debug("Failed to connect: no port selected");
                 connectButton.setSelected(false);
@@ -127,24 +117,21 @@ public class COMPortsController implements Initializable {
         }
     }
 
-    @FXML
-    protected void sendMessageAction(ActionEvent e) {
-        byte[] dataToWrite = inputArea.getText().getBytes(DEFAULT_TRANSPORT_ENCODING);
-        comPortOutput.writeBytes(dataToWrite, dataToWrite.length);
+    private void setupConnectedPort() {
+        comPortOutput.setComPort(connectedPort);
+        connectedPort.removeDataListener();
+        CollisionComPortInputListener listener = new CollisionComPortInputListener(outputArea::appendText);
+        listener.setDebugOutput(debugOutput);
+        listener.setComPortOutput(comPortOutput);
+        connectedPort.addDataListener(listener);
     }
 
-    protected void setupConnection(SerialPort port, DebugOutput debugOutput,
-                                   Consumer<ComPortOutput> onSuccess, Runnable onError) {
-        ioFactory.getComPortConnectionAlgorithm(port, debugOutput, onSuccess, onError).connect();
-    }
-
-    protected boolean disconnectFromCurrentPort() {
+    boolean disconnectFromCurrentPort() {
         if (connectedPort == null) {
             return false;
         }
         if (connectedPort.closePort()) {
             connectedPort = null;
-            comPortOutput = null;
             return true;
         }
         log.error("Failed to disconnectFromCurrentPort from {}", connectedPort.getSystemPortName());
